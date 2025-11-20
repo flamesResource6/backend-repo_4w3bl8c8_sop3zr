@@ -1,48 +1,87 @@
 """
-Database Schemas
+TriTrack Database Schemas
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model corresponds to a MongoDB collection.
+Collection name is the lowercase of the class name.
 """
-
+from __future__ import annotations
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List, Literal
+from datetime import datetime
 
-# Example schemas (replace with your own):
+# Core user profile
+class Profile(BaseModel):
+    user_id: str = Field(..., description="Unique identifier for the user (email or UUID)")
+    name: Optional[str] = Field(None, description="Display name")
+    age: int = Field(..., ge=5, le=120)
+    sex: Literal["male", "female"]
+    height_cm: float = Field(..., gt=0)
+    weight_kg: float = Field(..., gt=0)
+    activity_level: Literal[
+        "sedentary", "light", "moderate", "active", "very_active"
+    ] = "sedentary"
+    goal: Optional[Literal["lose", "maintain", "gain"]] = None
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+# Health / Food
+class FoodNutrients(BaseModel):
+    calories: float = 0
+    protein_g: float = 0
+    carbs_g: float = 0
+    fat_g: float = 0
+    fiber_g: float = 0
+    sodium_mg: Optional[float] = None
+    sugar_g: Optional[float] = None
+    calcium_mg: Optional[float] = None
+    iron_mg: Optional[float] = None
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class FoodEntry(BaseModel):
+    user_id: str
+    source: Literal["text", "search", "barcode", "photo"] = "text"
+    query: str = Field("", description="Raw user input or barcode")
+    description: str = Field("", description="Human readable food name")
+    nutrients: FoodNutrients
+    eaten_at: Optional[datetime] = None
+    meal: Optional[Literal["breakfast", "lunch", "dinner", "snack"]] = None
 
-# Add your own schemas here:
-# --------------------------------------------------
+# Education
+class ExamPlanItem(BaseModel):
+    topic: str
+    hours: float
+    due_date: Optional[datetime] = None
+    repetitions: List[int] = Field(default_factory=list, description="Spaced repetition days")
+    status: Literal["pending", "in_progress", "done"] = "pending"
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class ExamPlan(BaseModel):
+    user_id: str
+    exam: str
+    weeks: int = 8
+    items: List[ExamPlanItem]
+
+class StudyProgress(BaseModel):
+    user_id: str
+    exam: str
+    topic: str
+    status: Literal["pending", "in_progress", "done"] = "in_progress"
+    score: Optional[float] = None
+
+class MockTest(BaseModel):
+    user_id: str
+    exam: str
+    title: str
+    score: Optional[float] = None
+    taken_at: Optional[datetime] = None
+
+# Money
+class Hustle(BaseModel):
+    user_id: str
+    name: str
+    type: Literal["SaaS", "Instagram", "Gig", "Other"] = "Other"
+
+class Transaction(BaseModel):
+    user_id: str
+    hustle_name: str
+    amount: float
+    type: Literal["income", "expense"]
+    category: Optional[str] = None
+    note: Optional[str] = None
+    occurred_at: Optional[datetime] = None
